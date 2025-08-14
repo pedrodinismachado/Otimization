@@ -1,0 +1,113 @@
+clc; clear; close all;
+
+% Definir o ponto de quebra
+a = 1;              % ponto de quebra em x
+b = a^2;            % deve estar abaixo ou igual à curva x1^2
+
+% Definir funções por partes: l(x1)
+% l1 de [0, a], l2 de [a, 2]
+l1 = @(x) b/a * x;              % reta de (0,0) até (a,b)
+l2 = @(x) (4 - b)/(2 - a)*(x - a) + b;  % reta de (a,b) até (2,4)
+
+% Domínios
+x1 = linspace(0,2,1000);
+x2_orig = x1.^2;
+  
+% Função l(x1) linear por ramos
+l = zeros(size(x1));
+for i = 1:length(x1)
+    if x1(i) <= a
+        l(i) = l1(x1(i));
+    else
+        l(i) = l2(x1(i));
+    end
+end
+
+% Cálculo das áreas (por integração)
+area_R  = integral(@(x) 4 - x.^2, 0, 2);
+area_Rp = integral(@(x) 4 - l1(x), 0, a) + integral(@(x) 4 - l2(x), a, 2);
+
+fprintf('Área da região R: %.4f\n', area_R);
+fprintf('Área da região R'': %.4f\n', area_Rp);
+fprintf('Diferença de área: %.4f\n', area_R - area_Rp);
+
+% Gráfico
+figure; hold on; grid on;
+fill([x1, fliplr(x1)], [x2_orig, 4*ones(size(x1))], [0.8 0.9 1], 'EdgeColor', 'none', 'DisplayName', 'Região R');
+fill([x1, fliplr(x1)], [l, 4*ones(size(x1))], [0.5 0.8 0.5], 'EdgeColor', 'none', 'DisplayName', 'Região R''');
+plot(x1, x2_orig, 'b', 'LineWidth', 2, 'DisplayName', 'x_2 = x_1^2');
+plot(x1, l, 'r--', 'LineWidth', 2, 'DisplayName', 'l(x_1)');
+scatter(a, b, 100, 'k', 'filled', 'DisplayName', 'Ponto de quebra (a,b)');
+
+xlabel('x_1'); ylabel('x_2');
+legend show;
+title('Aproximação poligonal da região R');
+axis([0 2 0 4.5]);
+
+
+
+
+% Malha de valores para a e b
+a_vals = linspace(0.05, 1.95, 100);  % evitamos 0 e 2 para não dividir por zero
+b_vals = linspace(0, 4, 100);
+
+[A, B] = meshgrid(a_vals, b_vals);
+Z = zeros(size(A));
+
+% Função para calcular diferença de áreas
+for i = 1:length(a_vals)
+    for j = 1:length(b_vals)
+        a = A(j, i);
+        b = B(j, i);
+        
+        if a <= 0 || a >= 2
+            Z(j, i) = NaN;
+            continue;
+        end
+        
+        % Parte 1: [0, a]
+        x1_1 = linspace(0, a, 100);
+        l1 = (b/a) * x1_1;
+        f1 = x1_1.^2 - l1;
+        area1 = trapz(x1_1, f1);
+        
+        % Parte 2: [a, 2]
+        x1_2 = linspace(a, 2, 100);
+        l2 = ((4 - b) / (2 - a)) * (x1_2 - a) + b;
+        f2 = x1_2.^2 - l2;
+        area2 = trapz(x1_2, f2);
+        
+        % Área total
+        Z(j, i) = area1 + area2;
+    end
+end
+
+% Gráfico das curvas de nível
+figure;
+contourf(A, B, Z, 50, 'LineColor', 'none');
+colorbar;
+hold on;
+
+% Restrições
+plot(a_vals, a_vals.^2, 'r--', 'LineWidth', 1.5); % b = a^2
+yline(4, 'r--', 'LineWidth', 1.5);                % b = 4
+
+xlabel('a (ponto de quebra)');
+ylabel('b = \ell(a)');
+title('Curvas de Nível da Diferença de Áreas entre x_1^2 e \ell(x_1)');
+legend({'b = a^2', 'b = 4'}, 'Location', 'northwest');
+grid on;
+
+
+lambda = linspace(0,5,1000);
+
+% Definir a função dual L_d(lambda)
+L_d = (37/12) - 2*lambda - lambda.^2 + (2/3)*lambda.^3;
+
+% Plotar
+figure;
+plot(lambda, L_d, 'LineWidth', 2);
+grid on;
+xlabel('\lambda');
+ylabel('L_d(\lambda)');
+title('Gráfico da função dual L_d(\lambda) no intervalo [0,5]');
